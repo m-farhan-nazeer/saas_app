@@ -1,10 +1,11 @@
 const express = require('express')
 const cors = require('cors')
-const { PrismaClient } = require('@prisma/client')
 require('dotenv').config()
 
+const userRoutes = require('./routes/userRoutes')
+const authRoutes = require('./routes/authRoutes')
+
 const app = express()
-const prisma = new PrismaClient()
 
 app.use(cors())
 app.use(express.json())
@@ -13,19 +14,8 @@ app.get('/', (req, res) => {
   res.json({ message: 'Backend is running' })
 })
 
-app.get('/users', async (req, res) => {
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  })
-
-  res.json(users)
-})
+app.use('/users', userRoutes)
+app.use('/auth', authRoutes)
 
 const PORT = process.env.PORT || 5000
 
