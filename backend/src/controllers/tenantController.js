@@ -43,3 +43,29 @@ export const createTenant = async (req, res) => {
     });
   }
 };
+
+export const getMyTenants = async (req, res) => {
+  try {
+    const memberships = await Membership.find({
+      userId: req.user.userId,
+      status: "active",
+    }).populate("tenantId");
+
+    const tenants = memberships.map((membership) => ({
+      membershipId: membership._id,
+      role: membership.role,
+      status: membership.status,
+      tenant: membership.tenantId,
+    }));
+
+    res.status(200).json({
+      message: "Tenants fetched successfully",
+      tenants,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};

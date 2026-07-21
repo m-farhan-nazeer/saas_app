@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import User from "./models/User.js";
 import authRoutes from "./routes/authRoutes.js";
+import tenantRoutes from "./routes/tenantRoutes.js";
 import { protect } from "./middleware/authMiddleware.js";
 const app = express();
 
@@ -18,7 +19,7 @@ app.get("/api/test-user", async (req, res) => {
   const count = await User.countDocuments();
   res.json({ message: "User model works", count });
 });
-
+app.use("/api/tenants", tenantRoutes);
 app.use("/api/auth", authRoutes);
 app.get("/api/protected", protect, (req, res) => {
   res.json({
