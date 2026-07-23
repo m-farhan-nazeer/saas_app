@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-
+import {OAuth2Client} from "google-auth-library";
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 export const signup = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -88,6 +89,77 @@ export const login = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
+export const googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        message: "Google credential is required",
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload || !payload.email) {
+      return res.status(400).json({
+        message: "Invalid Google account data",
+      });
+    }
+
+    const { sub, email, name } = payload;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        name: name || "Google User",
+        email,
+        authProvider: "google",
+        googleId: sub,
+      });
+    } else {
+      if (!user.googleId) {
+        user.googleId = sub;
+      }
+
+      user.authProvider = "google";
+
+      if (!user.name && name) {
+        user.name = name;
+      }
+
+      await user.save();
+    }
+
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.status(200).json({
+      message: "Google login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Google login failed",
       error: error.message,
     });
   }

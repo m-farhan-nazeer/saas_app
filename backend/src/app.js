@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes.js";
 import tenantRoutes from "./routes/tenantRoutes.js";
 import { protect } from "./middleware/authMiddleware.js";
 import { requireTenant } from "./middleware/tenantMiddleware.js";
+import { authorizeRoles } from "./middleware/rbacMiddleware.js";
 const app = express();
 
 app.use(cors());
@@ -15,7 +16,31 @@ app.get("/api/health", (req, res) => {
     message: "Backend is running",
   });
 });
+app.get(
+  "/api/admin-only",
+  protect,
+  requireTenant,
+  authorizeRoles("admin"),
+  (req, res) => {
+    res.status(200).json({
+      message: "Admin route works",
+      tenant: req.tenant,
+    });
+  }
+);
 
+app.get(
+  "/api/staff-or-admin",
+  protect,
+  requireTenant,
+  authorizeRoles("admin", "staff"),
+  (req, res) => {
+    res.status(200).json({
+      message: "Staff or admin route works",
+      tenant: req.tenant,
+    });
+  }
+);
 app.get("/api/test-user", async (req, res) => {
   const count = await User.countDocuments();
   res.json({ message: "User model works", count });
